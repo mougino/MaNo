@@ -1,0 +1,234 @@
+#include <Resource.h>
+
+    1 24 MOVEABLE PURE "manifest.xml" // embedded manifest file
+
+    5 ICON MOVEABLE PURE LOADONCALL DISCARDABLE "MANO.ICO"
+
+    6 RCDATA DISCARDABLE "markdown.head"
+    7 RCDATA DISCARDABLE "markdown.foot"
+    8 RCDATA DISCARDABLE "markdown.svg"
+    9 RCDATA DISCARDABLE "emojis.lst"
+
+10  MENUEX MOVEABLE IMPURE LOADONCALL DISCARDABLE
+BEGIN
+    POPUP "&File", , , 0
+    BEGIN
+        MENUITEM "&New\tCtrl+N", 1000
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "&Open\tCtrl+O", 1010
+        MENUITEM "&Save\tCtrl+S", 1020
+        MENUITEM "Save &As\tCtrl+Shift+S", 1021
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "&Close\tCtrl+W", 1098
+    END
+
+    POPUP "&Edit", , , 0
+    BEGIN
+        MENUITEM "&Undo\tCtrl+Z", 1100
+        MENUITEM "&Redo\tCtrl+Y", 1101
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "C&opy\tCtrl+C", 1102
+        MENUITEM "C&ut\tCtrl+X", 1103
+        MENUITEM "&Paste\tCtrl+V", 1104
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "Select &All\tCtrl+A", 1105
+        MENUITEM "&Goto Line\tCtrl+G", 1106
+    END
+
+    POPUP "&Format", , , 0
+    BEGIN
+        MENUITEM "&Bold\tCtrl+B", 1130
+        MENUITEM "&Italic\tCtrl+I", 1131
+        MENUITEM "&Strikethrough\tCtrl+U", 1132
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "Make &Link(s)\tCtrl+L", 1133
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "Change &EOL\tCtrl+E", 1134
+    END
+
+    POPUP "&Insert", , , 0
+    BEGIN
+        MENUITEM "&Header (Linkable)\tCtrl+Alt+H", 1200
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "&Link To Header\tCtrl+Alt+L", 1201
+        MENUITEM "&External Link\tCtrl+Alt+E", 1202
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "&Ordered List\tCtrl+Alt+O", 1203
+        MENUITEM "&Unordered List\tCtrl+Alt+U", 1204
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "&Code Block\tCtrl+Alt+C", 1205
+        MENUITEM "Inline Co&de\tCtrl+Alt+D", 1206
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "&Table\tCtrl+Alt+T", 1207
+        MENUITEM "&Image\tCtrl+Alt+I", 1208
+        MENUITEM "Block&quote\tCtrl+Alt+Q", 1209
+        MENUITEM "T&ask List\tCtrl+Alt+A", 1210
+        MENUITEM "Emo&ji\tCtrl+Alt+J", 1211
+    END
+
+    POPUP "&Search", , , 0
+    BEGIN
+        MENUITEM "&Find Text\tCtrl+F", 1110
+        MENUITEM "&Replace Text\tCtrl+H", 1111
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "&Next Occurence\tF3", 1112
+        MENUITEM "&Previous Occurence\tShift+F3", 1113
+    END
+
+    POPUP "&Tools", , , 0
+    BEGIN
+        MENUITEM "&Generate/View In Browser\tF5", 1120
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "&Table Of Content\tF2", 1121
+        MENUITEM "&Progress Indicator\tF4", 1122
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "&Check Duplicate Headers\tF7", 1123
+        MENUITEM "Fill &Empty Links\tF8", 1124
+        MENUITEM "Fix &Incorrect Links\tF9", 1125
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "&Sort List Alphabetically\tF11", 1126
+    END
+
+    POPUP "&Help", , , 0
+    BEGIN
+        MENUITEM "&About\tF1", 1099
+    END
+END
+
+2000 DIALOGEX MOVEABLE IMPURE LOADONCALL DISCARDABLE    10, 10, 226, 57, 0
+STYLE DS_MODALFRAME | 0x0004 | DS_CENTER | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_POPUP
+CAPTION " File Save Confirmation"
+FONT 8, "MS Sans Serif", 700, 0 /*FALSE*/
+BEGIN
+    LTEXT           "File is not saved. Save it now ?", 125, 49,17,111,13, SS_LEFT, , 0
+    ICON            5, 999  13,14,18,20, , 0
+    PUSHBUTTON      "&Yes", 2010,    164,12,50,14, 0, , 0
+    PUSHBUTTON      "&No", 2011,     164,29,50,15, 0, , 0
+END
+
+3000 DIALOGEX MOVEABLE IMPURE LOADONCALL DISCARDABLE    10, 10, 254, 69, 0
+STYLE DS_MODALFRAME | 0x0004 | DS_CENTER | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_POPUP
+CAPTION " Find Text"
+FONT 8, "MS Sans Serif", 700, 0 /*FALSE*/
+BEGIN
+    EDITTEXT        100,    10,9,233,13, ES_AUTOHSCROLL | ES_MULTILINE | ES_LEFT, , 0
+    PUSHBUTTON      "&Find next", 101,   193,28,50,14, 0, , 0
+    PUSHBUTTON      "&Close", 102,   193,44,50,14, 0, , 0
+    GROUPBOX        "", 99,     85,25,71,35, 0, , 0
+    CONTROL         " Whole &Word", 103, "Button", BS_AUTOCHECKBOX | WS_TABSTOP,     92,47,55,8, , 0
+    CONTROL         " Match C&ase", 104, "Button", BS_AUTOCHECKBOX | WS_TABSTOP,     92,34,55,10, , 0
+    ICON            5, 65535    164,34,18,20, , 0
+    GROUPBOX        "", 65534,      9,25,72,35, 0, , 0
+    CONTROL         " Search &Up", 105, "Button", BS_AUTORADIOBUTTON,       17,35,60,8, , 0
+    CONTROL         " Search &Down", 106, "Button", BS_AUTORADIOBUTTON,     17,46,60,10, , 0
+END
+
+4000 DIALOGEX MOVEABLE IMPURE LOADONCALL DISCARDABLE    10, 10, 295, 90, 0
+STYLE DS_MODALFRAME | 0x0004 | DS_CENTER | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_POPUP
+CAPTION " Replace Text"
+FONT 8, "MS Sans Serif", 700, 0 /*FALSE*/
+BEGIN
+    EDITTEXT        100,    43,9,242,13, ES_AUTOHSCROLL | ES_MULTILINE | ES_LEFT, , 0
+    EDITTEXT        110,    43,28,242,13, ES_AUTOHSCROLL | ES_MULTILINE | ES_LEFT, , 0
+    PUSHBUTTON      "&Find next", 101,   194,48,41,14, 0, , 0
+    PUSHBUTTON      "&Close", 102,   194,65,91,13, 0, , 0
+    GROUPBOX        "", 99,     117,44,66,35, 0, , 0
+    CONTROL         " Whole &Word", 103, "Button", BS_AUTOCHECKBOX | WS_TABSTOP,     123,66,54,8, , 0
+    CONTROL         " Match C&ase", 104, "Button", BS_AUTOCHECKBOX | WS_TABSTOP,     123,53,54,10, , 0
+    ICON            5, 997  11,53,18,20, , 0
+    GROUPBOX        "", 996,    42,44,66,35, 0, , 0
+    CONTROL         " Search &Up", 105, "Button", BS_AUTORADIOBUTTON,       46,54,57,9, , 0
+    CONTROL         " Search &Down", 106, "Button", BS_AUTORADIOBUTTON,     46,65,57,10, , 0
+    RTEXT           "Replace", 999,     6,12,30,9, SS_LEFT, , 0
+    RTEXT           "With", 998,    5,30,31,9, SS_LEFT, , 0
+    PUSHBUTTON      "&Replace", 115,     242,48,43,14, 0, , 0
+END
+
+5000 DIALOGEX MOVEABLE IMPURE LOADONCALL DISCARDABLE    10, 10, 157, 63, 0
+STYLE DS_MODALFRAME | 0x0004 | DS_CENTER | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_POPUP
+CAPTION " Goto Line Number"
+FONT 8, "MS Sans Serif", 700, 0 /*FALSE*/
+BEGIN
+    EDITTEXT        100,    111,18,34,12, ES_AUTOHSCROLL | ES_LEFT, , 0
+    PUSHBUTTON      "OK", 1,    39,38,50,14, 0, , 0
+    PUSHBUTTON      "Cancel", 2,    95,38,51,14, 0, , 0
+    LTEXT           "File has xxxx lines", 101,     41,6,105,9, SS_LEFT, , 0
+    CONTROL         "", 9, "Static", SS_BLACKFRAME | 0x00000010,    999,8,10,18, , 0
+    LTEXT           "Goto Line Number", 102,    41,18,61,10, SS_LEFT, , 0
+    ICON            5, 999  9,12,18,19, , 0
+END
+
+6000 DIALOGEX MOVEABLE IMPURE LOADONCALL DISCARDABLE    10, 10, 231, 132, 0
+STYLE DS_MODALFRAME | 0x0004 | DS_CENTER | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_POPUP
+CAPTION " About MaNo - The Markdown Notepad"
+FONT 8, "MS Sans Serif", 700, 0 /*FALSE*/
+BEGIN
+    ICON            5, 65535 14,12,19,20, , 0
+    LTEXT           "MaNo Version 1.0.0", 65534,      57,24,118,10, SS_LEFT, , 0
+    LTEXT           "MaNo stands for Markdown Notepad.\nIt is a lean editor for the Markdown language, it\ngenerates html and provides performance tools.", 65531,      58,40,153,30, SS_LEFT, , 0
+    LTEXT           "Copyright mougino@free.fr  2017", 65533,   58,74,151,10, SS_LEFT, , 0
+    CONTROL         "<a>http://mougino.free.fr</a>", 2222,   "SysLink",    0,     58,85,68,10
+    PUSHBUTTON      "OK", 1,    164,113,50,14, 0, , 0
+    GROUPBOX        "", 65529,      47,11,167,94, 0, , 0
+END
+
+7000 DIALOGEX MOVEABLE IMPURE LOADONCALL DISCARDABLE    10, 10, 167, 63, 0
+STYLE DS_MODALFRAME | 0x0004 | DS_CENTER | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_POPUP
+CAPTION " Change EOL"
+FONT 8, "MS Sans Serif", 700, 0 /*FALSE*/
+BEGIN
+    LTEXT           "xxxx end-of-lines detected.", 101,     41,6,115,9, SS_LEFT, , 0
+    LTEXT           "Change end-of-lines to yyyy?", 102,    41,18,115,10, SS_LEFT, , 0
+    ICON            5, 65535  9,12,18,19, , 0
+    PUSHBUTTON      "&Yes", 2010,    39,38,50,14, 0, , 0
+    PUSHBUTTON      "&No", 2011,    95,38,51,14, 0, , 0
+END
+
+8000 DIALOGEX MOVEABLE IMPURE LOADONCALL DISCARDABLE    10, 10, 186, 57, 0
+STYLE DS_MODALFRAME | 0x0004 | DS_CENTER | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_POPUP
+CAPTION " Title"
+FONT 8, "MS Sans Serif", 700, 0 /*FALSE*/
+BEGIN
+    LTEXT           "Label", 125, 49,12,130,26, SS_LEFT, , 0
+    ICON            5, 65535  13,7,18,20, , 0
+    PUSHBUTTON      "OK", 1,    124,39,50,15, 0, , 0
+END
+
+
+8100 DIALOGEX MOVEABLE IMPURE LOADONCALL DISCARDABLE    10, 10, 306, 100, 0
+STYLE DS_MODALFRAME | 0x0004 | DS_CENTER | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_POPUP
+CAPTION " Title"
+FONT 8, "MS Sans Serif", 700, 0 /*FALSE*/
+BEGIN
+    LTEXT           "Label",   125,         53,20,233,13, SS_LEFT, , 0
+    COMBOBOX        126,                    53,40,170,20,       CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Button",  127,         227,40,50,13, 0, , 0
+    ICON            5, 65535                7,8,18,20, , 0
+    GROUPBOX        "", 65534,              39,6,250,61, 0, , 0
+    PUSHBUTTON      "&Cancel", 200,         39,76,50,14, 0, , 0
+END
+
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION 1, 0, 0, 0
+PRODUCTVERSION 1, 0, 0, 0
+FILEOS VOS_WINDOWS32
+FILETYPE VFT_APP
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "ApplicationType",  "Win32 executable\000"
+      VALUE "FileDescription",  "The Markdown Notepad\000"
+      VALUE "FileVersion",      "1.0.0"
+      VALUE "LegalCopyright",   "Copyright \251 2017 Nicolas Mougin\000"
+      VALUE "ProductName",      "MaNo\000"
+      VALUE "Licence",          "GNU GPL V3\000"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 0x4B0
+  END
+END
