@@ -19,6 +19,15 @@ MaNo website: http://mougino.free.fr/mano.html
 
 See "gpl.txt" or https://www.gnu.org/licenses/gpl.html
 
+# How to use
+
+You can use **MaNo** as a Windows graphical application, or in command line.
+For a list of command line options, type `mano /?` or `mano -h` at the prompt.
+
+> Usage: mano -c[v] input.md
+>        -c  = convert input.md to input.htm
+>        -cv = convert + view
+
 # How to build
 
 MaNo is written and compiled with Classic PowerBasic v9.07.0205.

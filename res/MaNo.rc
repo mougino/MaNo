@@ -39,7 +39,8 @@ BEGIN
     BEGIN
         MENUITEM "&Bold\tCtrl+B", 1130
         MENUITEM "&Italic\tCtrl+I", 1131
-        MENUITEM "&Strikethrough\tCtrl+U", 1132
+        MENUITEM "&Underline\tCtrl+U", 1135
+        MENUITEM "&Strikethrough\tCtrl+T", 1132
         MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
         MENUITEM "Make &Link(s)\tCtrl+L", 1133
         MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
@@ -49,6 +50,7 @@ BEGIN
     POPUP "&Insert", , , 0
     BEGIN
         MENUITEM "&Header (Linkable)\tCtrl+Alt+H", 1200
+        MENUITEM "Table Of &Kontent\tCtrl+Alt+K", 1212
         MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
         MENUITEM "&Link To Header\tCtrl+Alt+L", 1201
         MENUITEM "&External Link\tCtrl+Alt+E", 1202
@@ -79,7 +81,7 @@ BEGIN
     BEGIN
         MENUITEM "&Generate/View In Browser\tF5", 1120
         MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
-        MENUITEM "&Table Of Content\tF2", 1121
+        MENUITEM "&Header Navigator\tF2", 1121
         MENUITEM "&Progress Indicator\tF4", 1122
         MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
         MENUITEM "&Check Duplicate Headers\tF7", 1123
@@ -164,9 +166,9 @@ CAPTION " About MaNo - The Markdown Notepad"
 FONT 8, "MS Sans Serif", 700, 0 /*FALSE*/
 BEGIN
     ICON            5, 65535 14,12,19,20, , 0
-    LTEXT           "MaNo Version 1.0.0", 65534,      57,24,118,10, SS_LEFT, , 0
+    LTEXT           "MaNo Version 1.2.0", 65534,      57,24,118,10, SS_LEFT, , 0
     LTEXT           "MaNo stands for Markdown Notepad.\nIt is a lean editor for the Markdown language, it\ngenerates html and provides performance tools.", 65531,      58,40,153,30, SS_LEFT, , 0
-    LTEXT           "Copyright mougino@free.fr  2017", 65533,   58,74,151,10, SS_LEFT, , 0
+    LTEXT           "Copyright mougino@free.fr  2017-2022", 65533,   58,74,151,10, SS_LEFT, , 0
     CONTROL         "<a>http://mougino.free.fr</a>", 2222,   "SysLink",    0,     58,85,68,10
     PUSHBUTTON      "OK", 1,    164,113,50,14, 0, , 0
     GROUPBOX        "", 65529,      47,11,167,94, 0, , 0
@@ -221,8 +223,8 @@ BEGIN
     BEGIN
       VALUE "ApplicationType",  "Win32 executable\000"
       VALUE "FileDescription",  "The Markdown Notepad\000"
-      VALUE "FileVersion",      "1.0.0"
-      VALUE "LegalCopyright",   "Copyright \251 2017 Nicolas Mougin\000"
+      VALUE "FileVersion",      "1.2.0"
+      VALUE "LegalCopyright",   "Copyright \251 2017-2022 Nicolas Mougin\000"
       VALUE "ProductName",      "MaNo\000"
       VALUE "Licence",          "GNU GPL V3\000"
     END

@@ -1,9 +1,29 @@
+
+' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+' After compilation, change byte #221 of the .exe to CHR$(3) to enable console mode '
+' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 ' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 '                        MaNo - The Markdown Notepad
 ' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 ' [ ] evo: last undo level: set the %EM_SETMODIFY of the richedit to %FALSE
 ' [ ] evo: -debug in command line
 ' [ ] evo: handle 2 different header labels w/ same link (e.g. # BIN Vs # BIN$ ...)
+
+' 1.2.0
+'-------
+' [X] evo: command line help with "mano /?" or "mano -h"
+' [X] evo: command line convert with "mano -c input.md"
+' [X] evo: command line convert+view with "mano -cv input.md"
+
+' 1.1.0
+'-------
+' [X] evo: Ctrl + Alt + K to insert a Table of Kontent
+' [X] evo: unordered list support several levels (Tabs before the '*')
+' [X] evo: handle making links on a multi-level unordered list
+
+' 1.0.0
+'-------
 ' [X] evo: Insert key should change cursor type (square) and/or show "INS/OVR" in status bar
 ' [X] evo: Ctrl + Down et Ctrl + Up to scroll
 ' [O] evo: support right mouse click (at minimum, does same thing as left mouse click)
@@ -33,7 +53,7 @@
 ' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 ' Performance Tools Implementation:
 ' ---------------------------------
-' [X] F5 Generate                   [X] F2 Table Of Content
+' [X] F5 Generate                   [X] F2 Header Navigator
 ' [X] F4 Progress Indicator         [X] F7 Check Duplicate Headers
 ' [X] F8 Fill Empty Links           [X] F9 Fix Incorrect Links
 ' [X] F11 Sort List Alphabetically
@@ -58,8 +78,10 @@
 #COMPILE EXE "MaNo.exe"
 #INCLUDE "inc\MaNo.inc"
 
-%DEBUG = 1
+%DEBUG = -1
 GLOBAL show_debug_stats AS LONG
+
+MACRO IS_COMMAND_LINE = (LEFT$(LCASE$(COMMAND$(1)), 2) = "-c")
 
 ' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 
@@ -68,6 +90,24 @@ $UNTITLED = "MaNo - Untitled"
 
 FUNCTION PBMAIN() AS LONG
 
+  ' ----------------------------------------------------
+  ' Is MaNo called in command line with argument -c[v] ?
+  ' ----------------------------------------------------
+    IF COMMAND$(1) = "/?" OR COMMAND$(1) = "-h" THEN
+        DosPrint "Usage: mano -c[v] input.md" + $CRLF
+        DosPrint "       -c  = convert input.md to input.htm" + $CRLF
+        DosPrint "       -cv = convert + view" + $CRLF
+        EXIT FUNCTION
+    ELSEIF (IS_COMMAND_LINE) THEN
+        F5_Generate ' handles if called from command line
+        EXIT FUNCTION
+    ELSE
+        CALL FreeConsole() ' Win32 modes -> hide console
+    END IF
+
+  ' -----------------------
+  ' Else go on with W32 Gui
+  ' -----------------------
     LOCAL  Wid            AS LONG
     LOCAL  Hgt            AS LONG
     LOCAL  Sw             AS DWORD
@@ -294,6 +334,10 @@ FUNCTION Message_Loop AS DWORD
             SendMessage hWnd,%WM_COMMAND,1200,0
             ! jmp MsgLoop
 
+          CASE ASC("k"), ASC("K")                       ' Ctrl + Alt + K Table Of Kontent
+            SendMessage hWnd,%WM_COMMAND,1212,0
+            ! jmp MsgLoop
+
           CASE ASC("l"), ASC("L")                       ' Ctrl + Alt + L link to header
             SendMessage hWnd,%WM_COMMAND,1201,0
             ! jmp MsgLoop
@@ -420,7 +464,11 @@ FUNCTION Message_Loop AS DWORD
             SendMessage hWnd,%WM_COMMAND,1131,0
             ! jmp MsgLoop
 
-          CASE ASC("u"), ASC("U")                       ' Ctrl + U strikethrough
+          CASE ASC("u"), ASC("U")                       ' Ctrl + U underline
+            SendMessage hWnd,%WM_COMMAND,1135,0
+            ! jmp MsgLoop
+
+          CASE ASC("T"), ASC("T")                       ' Ctrl + T strikethrough
             SendMessage hWnd,%WM_COMMAND,1132,0
             ! jmp MsgLoop
 
@@ -653,6 +701,8 @@ FUNCTION Wnd_Proc(BYVAL hWin   AS LONG, _
             Enclose_Selection_With "**"
           CASE 1131                                     ' Italic
             Enclose_Selection_With "*"
+          CASE 1135                                     ' Underline
+            Enclose_Selection_With "__"
           CASE 1132                                     ' Strikethrough
             Enclose_Selection_With "~~"
           CASE 1133                                     ' Make Link
@@ -699,6 +749,9 @@ FUNCTION Wnd_Proc(BYVAL hWin   AS LONG, _
         ' -----------
           CASE 1200                                     ' Header (Linkable)
             Start_Lines_With "# "
+
+          CASE 1212                                     ' Table Of Kontent
+            Create_ToK()
 
           CASE 1201                                     ' Link To Header
             Link_To_Header_Dlg()
@@ -755,7 +808,7 @@ FUNCTION Wnd_Proc(BYVAL hWin   AS LONG, _
             F5_Generate()
 
           CASE 1121                                     ' Table Of Content
-            F2_Show_ToC()
+            F2_Header_Nav()
 
           CASE 1122                                     ' Progress Indicator
             F4_Progress_Indicator()
@@ -1746,7 +1799,7 @@ FUNCTION Dialog_Combo_Proc(BYVAL hDlg   AS LONG, _
 
             SELECT CASE AS LONG dlg_combo_ope
 
-          ' F2- Table Of Content
+          ' F2- Header Navigator
           ' --------------------
             CASE 2
               Set_Sel (hdr_pos(i),hdr_pos(i))                                       ' go to header
@@ -2153,16 +2206,16 @@ END SUB
 
 MACRO Make_Link_Macro ' (algo taken from "tools\list-to-anchors.bas")
     IF TRIM$(s) = "" THEN
-      r += s + EOL                                      ' skip empty line
+      r += t + s + EOL                                  ' skip empty line
     ELSEIF LEFT$(s,2) = "* " THEN
-      r += "* [" + MID$(s,3) + "](" _                   ' handle unordered lists of header references
+      r += t + "* [" + MID$(s,3) + "](" _               ' handle unordered lists of header references
          + anchor(MID$(s,3)) + ")" + EOL
     ELSEIF ISTRUE VAL(LEFT$(s,INSTR(s,". ")-1)) THEN
       r += LEFT$(s,INSTR(s,". ")+1) + "["_              ' handle ordered lists of header references
          + MID$(s,INSTR(s,". ")+2) + "](" _
          + anchor(MID$(s,INSTR(s,". ")+2)) + ")" + EOL
     ELSE
-      r += "[" + s + "](" + anchor(s) + ")" + EOL       ' normal case
+      r += t + "[" + s + "](" + anchor(s) + ")" + EOL   ' normal case
     END IF
 END MACRO
 
@@ -2172,6 +2225,7 @@ SUB Make_Link_From_Selection ' Make a list from a single header reference,
                              ' or from a list of multiple header references
     LOCAL e     AS STRING
     LOCAL s     AS STRING
+    LOCAL t     AS STRING
     LOCAL r     AS STRING
     LOCAL nd    AS STRING    ' ending CR/LF of string
     LOCAL i     AS LONG
@@ -2191,6 +2245,11 @@ SUB Make_Link_From_Selection ' Make a list from a single header reference,
     ELSE
       FOR i = 1 TO PARSECOUNT(e,ANY $CRLF)                  ' multiple lines
         s = PARSE$(e,ANY $CRLF,i)
+        t = "" ' tabulations
+        WHILE LEFT$(s,1) = $TAB
+            t += $TAB
+            s = MID$(s,2)
+        WEND
         Make_Link_Macro
       NEXT
     END IF
@@ -2312,6 +2371,8 @@ END SUB
 
 SUB F5_Generate      ' F5- Generate and view in browser
 
+    LOCAL md            AS ASCIIZ * %MAX_PATH
+    LOCAL sbT           AS ASCIIZ * %MAX_PATH
     LOCAL buf           AS STRING
     LOCAL head          AS STRING
     LOCAL foot          AS STRING
@@ -2319,18 +2380,29 @@ SUB F5_Generate      ' F5- Generate and view in browser
     LOCAL emojis        AS STRING
     LOCAL html          AS STRING
     LOCAL lng           AS STRING
-    LOCAL md            AS ASCIIZ * %MAX_PATH
     LOCAL e, r, s, t    AS STRING
     LOCAL i, j, k, n    AS LONG
+    LOCAL t0            AS DOUBLE
+
+    t0 = TIMER
 
   ' Get current file name
   ' ---------------------
-    GetWindowText hWnd,BYVAL VARPTR(md),%MAX_PATH
-    IF md = $UNTITLED THEN
-        Dialog_Msg "Cannot generate unsaved file.", EXE.NAME$
-        EXIT SUB
+    IF (IS_COMMAND_LINE) THEN
+        IF File_Exist(COMMAND$(2)) THEN
+            md = COMMAND$(2)
+        ELSE
+            DosPrint "Error: file does not exist" + $CRLF
+            EXIT SUB
+        END IF
+    ELSE ' W32 GUI mode
+        GetWindowText hWnd,BYVAL VARPTR(md),%MAX_PATH
+        IF md = $UNTITLED THEN
+            Dialog_Msg "Cannot generate unsaved file.", EXE.NAME$
+            EXIT SUB
+        END IF
+        md = MID$(md,INSTR(md,$MANO)+LEN($MANO))
     END IF
-    md = MID$(md,INSTR(md,$MANO)+LEN($MANO))
 
   ' Extract html elements from resource
   ' -----------------------------------
@@ -2347,7 +2419,11 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Build html
   ' ----------
-    buf = $LF + RE_Get() + $LF
+    IF (IS_COMMAND_LINE) THEN
+        buf = $LF + Load_File(BYVAL VARPTR(md)) + $LF
+    ELSE ' W32 GUI mode
+        buf = $LF + RE_Get() + $LF
+    END IF
     REPLACE $CRLF WITH $LF IN buf           ' Unix format
     REPLACE $CR WITH $LF IN buf
     REPLACE "<" WITH "&lt;" IN buf          ' Html-protect
@@ -2356,6 +2432,10 @@ SUB F5_Generate      ' F5- Generate and view in browser
   ' Treat level-1 to level-6 headers
   ' --------------------------------
     FOR n=1 TO 6
+        IF %DEBUG THEN
+            sbT = "Treat level-"+TRIM$(STR$(n))+" headers"
+            SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+        END IF
         e = $LF + STRING$(n,"#") + " "
         r = "<h" + FORMAT$(n) + "><a id=""user-content-"" class=""anchor"" href=""#"" aria-hidden=""true"">"
         r += svg + "</a>header</h" + FORMAT$(n) + ">"
@@ -2381,6 +2461,10 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat images
   ' ------------
+    IF %DEBUG THEN
+        sbT = "Treat images"
+        SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+    END IF
     i = INSTR(buf,"![")
     WHILE ISTRUE i
         j = INSTR(i,buf,"](")
@@ -2399,6 +2483,10 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat links (external and to headers)
   ' -------------------------------------
+    IF %DEBUG THEN
+        sbT = "Treat links (external and to headers)"
+        SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+    END IF
     j = INSTR(buf,"](")
     WHILE ISTRUE j
         i = INSTR(j-LEN(buf),buf,"[")
@@ -2416,6 +2504,10 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat blockquotes
   ' -----------------
+    IF %DEBUG THEN
+        sbT = "Treat blockquotes"
+        SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+    END IF
     e = $LF + "> "
     i = INSTR(buf,e)
     WHILE ISTRUE i
@@ -2439,9 +2531,16 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat code blocks
   ' -----------------
+    n = 0
     e = $LF + "```"
     i = INSTR(buf,e)
+    s = TRIM$(STR$(TALLY(buf,e)/2))
     WHILE ISTRUE i
+        INCR n
+        IF %DEBUG THEN
+            sbT = "Treat code block # "+TRIM$(STR$(n))+" / "+s
+            SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+        END IF
         j = INSTR(i+LEN(e),buf,$LF)
         lng = MID$(buf,i+LEN(e),j-i-LEN(e))
         INCR j
@@ -2464,6 +2563,10 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat inline code
   ' -----------------
+    IF %DEBUG THEN
+        sbT = "Treat inline code"
+        SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+    END IF
     e = "`"
     i = INSTR(buf,e)
     WHILE ISTRUE i
@@ -2476,30 +2579,90 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat unordered lists
   ' ---------------------
+    IF %DEBUG THEN
+        sbT = "Treat unordered lists"
+        SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+    END IF
+
+    n = 0               ' list level
     e = $LF + "* "
     i = INSTR(buf,e)
-    WHILE ISTRUE i
-        buf = LEFT$(buf,i) + "<ul>" + $LF _             ' start of list
-            + "<li>" + MID$(buf,i+LEN(e))
-        i = INSTR(i,buf,$LF)
-        DO
-            j = INSTR(i+1,buf,$LF)
-            IF MID$(buf,j+1,1) = $LF THEN
-                buf = LEFT$(buf,j-1) + "</li>" _        ' end of list
-                + $LF + "</ul>" + MID$(buf,j+1)
-                EXIT LOOP
-            ELSEIF MID$(buf,j,LEN(e)) = e THEN          ' new list element
-                buf = LEFT$(buf,j-1) + "</li>" + $LF _
-                    + "<li>" + MID$(buf,j+LEN(e))
-                i = INSTR(i,buf,$LF)
-            END IF
-            i = INSTR(j+1,buf,$LF) - 1
-        LOOP
-        i = INSTR(j+1,buf,e)
-    WEND
+    j = i + 1
+    IF i = 0 THEN GOTO End_List
+
+Start_List:
+'    s = "<!--start of new list-->"               ' start of new list
+    s = "<ul>" + $LF + "<li>"
+    buf = LEFT$(buf,i) + s + MID$(buf,i+LEN(e))
+    i = INSTR(i+LEN(s),buf,$LF)
+
+Browse_List:                                    ' browse the current list
+    j = INSTR(i+1,buf,$LF)
+
+  ' Double Line Feed --> end of previous list
+  ' -------------------------------------------------------------------------
+    IF j = i + 1 THEN
+        s = "</li>" + $LF + REPEAT$(n+1,"</ul>")
+'        s += "<!--end of level-"+TRIM$(STR$(n+1))+" list-->"
+        s += $LF + $LF
+        buf = LEFT$(buf,i-1) + s + MID$(buf,j+1)
+        n = 0 : e = $LF + "* "                  ' reset list level
+        i = INSTR(j+LEN(s)+1, buf, e)
+        IF i > 0 THEN GOTO Start_List ELSE GOTO End_List
+    END IF
+
+  ' New list element at same level
+  ' -------------------------------------------------------------------------
+    IF MID$(buf,i,LEN(e)) = e THEN
+        s = "</li>" + $LF
+'        s += "<!--same level-->"
+        s += STRING$(n,$TAB) + "<li>"
+        buf = LEFT$(buf,i-1) + s + MID$(buf,i+LEN(e))
+        i = INSTR(i+LEN(s),buf,$LF)
+        GOTO Browse_List
+    END IF
+
+  ' New list element at increased level (+1)
+  ' -------------------------------------------------------------------------
+    e = $LF + STRING$(n+1,$TAB) + "* "
+    IF MID$(buf,i,LEN(e)) = e THEN              ' new list element at increased level (+1)
+        INCR n
+        s = "</li>" + $LF + STRING$(n,$TAB) + "<ul>"
+'        s += "<!--increased level-->"
+        s += $LF + STRING$(n,$TAB) + "<li>"
+        buf = LEFT$(buf,i-1) + s + MID$(buf,i+LEN(e))
+        i = INSTR(i+LEN(s),buf,$LF)
+        GOTO Browse_List
+    END IF
+
+  ' New list element at decreased level (-1..n)
+  ' -------------------------------------------------------------------------
+    FOR k = n-1 TO 0 STEP -1
+        e = $LF + STRING$(k,$TAB) + "* "
+        IF MID$(buf,i,LEN(e)) = e THEN          ' new list element at decreased level (-?)
+            s = "</li>" + $LF + STRING$(n-k,$TAB) + REPEAT$(n-k,"</ul>")
+'            s += "<!--decreasing from level-"+TRIM$(STR$(n))+" to level-"+TRIM$(STR$(k))+"-->"
+            s += $LF + STRING$(k,$TAB) + "<li>"
+            buf = LEFT$(buf,i-1) + s + MID$(buf,i+LEN(e))
+            n = k
+            i = INSTR(i+LEN(s),buf,$LF)
+            GOTO Browse_List
+        END IF
+    NEXT
+
+  ' Other (should not happen)
+  ' -------------------------
+    i = j
+    GOTO Browse_List
+
+End_List:
 
   ' Treat ordered lists
   ' -------------------
+    IF %DEBUG THEN
+        sbT = "Treat ordered lists"
+        SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+    END IF
     e = $LF + "1. "
     i = INSTR(buf,e)
     WHILE ISTRUE i
@@ -2527,6 +2690,10 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat task lists
   ' ----------------
+    IF %DEBUG THEN
+        sbT = "Treat task lists"
+        SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+    END IF
     e = $LF + "- ["
     i = INSTR(buf,e)
     WHILE ISTRUE i
@@ -2572,6 +2739,10 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat tables
   ' ------------
+    IF %DEBUG THEN
+        sbT = "Treat tables"
+        SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+    END IF
     e = "-|-"
     j = INSTR(buf,e)
     WHILE ISTRUE j
@@ -2621,6 +2792,10 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat bold
   ' ----------
+    IF %DEBUG THEN
+        sbT = "Treat bold"
+        SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+    END IF
     e = "**"
     i = INSTR(buf,e)
     WHILE ISTRUE i
@@ -2631,8 +2806,28 @@ SUB F5_Generate      ' F5- Generate and view in browser
         i = INSTR(j,buf,e)
     WEND
 
+  ' Treat underline
+  ' ---------------
+    IF %DEBUG THEN
+        sbT = "Treat underline"
+        SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+    END IF
+    e = "__"
+    i = INSTR(buf,e)
+    WHILE ISTRUE i
+        buf = LEFT$(buf,i-1) + "<u>" + MID$(buf,i+LEN(e))
+        j = INSTR(i,buf,e)
+        IF ISFALSE j THEN EXIT LOOP
+        buf = LEFT$(buf,j-1) + "</u>" + MID$(buf,j+LEN(e))
+        i = INSTR(j,buf,e)
+    WEND
+
   ' Treat strikethrough
   ' -------------------
+    IF %DEBUG THEN
+        sbT = "Treat strikethrough"
+        SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+    END IF
     e = "~~"
     i = INSTR(buf,e)
     WHILE ISTRUE i
@@ -2645,6 +2840,10 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat italic
   ' ------------
+    IF %DEBUG THEN
+        sbT = "Treat italic"
+        SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+    END IF
     e = "*"
     i = INSTR(buf,e)
     WHILE ISTRUE i
@@ -2667,6 +2866,10 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat hyperlinks (http:// www. mailto: etc.)
   ' --------------------------------------------
+    IF %DEBUG THEN
+        sbT = "Treat hyperlinks"
+        SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+    END IF
     LOCAL url_start() AS STRING
     DIM url_start(1 TO 5)    ' (1)        (2)         (3)     (4)       (5)
     ARRAY ASSIGN url_start() = "http://", "https://", "www.", "ftp://", "mailto:"
@@ -2700,6 +2903,10 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat emojis
   ' ------------
+    IF %DEBUG THEN
+        sbT = "Treat emojis"
+        SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+    END IF
     FOR i=1 TO PARSECOUNT(emojis,$LF)
         r = PARSE$(emojis,$LF,i)
         IF LEFT$(r,1) <> ":" THEN ITERATE FOR
@@ -2715,34 +2922,36 @@ SUB F5_Generate      ' F5- Generate and view in browser
             IN buf
     NEXT
 
-  ' Add parapgraphs for everything else
-  ' -----------------------------------
+  ' Add paragraphs for everything else
+  ' ----------------------------------
+    IF %DEBUG THEN
+        sbT = "Add paragraphs"
+        SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+    END IF
     LOCAL tags() AS STRING
     DIM tags(1 TO 6)    ' (1)     (2)     (3)             (4)      (5)        (6)
     ARRAY ASSIGN tags() = "<ul>", "<ol>", "<blockquote>", "<pre>", "<table>", "<h"
     i = INSTR(buf,$LF)
-    WHILE ISTRUE i AND i < LEN(buf)
-      ' Skip specific tag-blocks ((un)ordered lists, blockquotes, etc.)
-        k = 0
-        FOR n=LBOUND(tags) TO UBOUND(tags)
-            IF INSTR(i+1,buf,tags(n)) = i+1 THEN
-                i = INSTR(i,buf,"</"+MID$(tags(n),2))   ' look for closing tag
-                k = 1
-                EXIT FOR                                ' mark as skipped
+    WHILE i > 0 AND i < LEN(buf)
+      ' Skip specific tag-blocks: (un)ordered lists, blockquotes, etc.
+        FOR n = LBOUND(tags) TO UBOUND(tags)
+            IF INSTR(i,buf,$LF+tags(n)) = i THEN            ' found opening tag
+                s = "</" + MID$(tags(n),2)
+                j = INSTR(i,buf,$LF+s)                      ' look for closing tag
+                IF j=0 THEN j=INSTR(i,buf,s)
+                i = INSTR(j+2,buf,$LF)
+                ITERATE LOOP
             END IF
         NEXT
-        IF k = 1 THEN
-            i = INSTR(i+1,buf,$LF)
-            ITERATE LOOP
-        END IF
       ' Skip comments
         IF INSTR(i+1,buf,"<!--") = i+1 THEN
             i = INSTR(i+1,buf,"-->") + LEN("-->")
+            i = INSTR(i+1,buf,$LF)
             ITERATE LOOP
         END IF
       ' Not skipped -> raw text (or enhanced with <b>, <code>, etc.)
         buf = LEFT$(buf,i) _
-            + "<p>" _                                   ' -> start paragraph
+            + "<p>" _                                       ' -> start paragraph
             + MID$(buf,i+1)
         DO
             i = INSTR(i+1,buf,$LF)
@@ -2755,12 +2964,13 @@ SUB F5_Generate      ' F5- Generate and view in browser
                 buf = LEFT$(buf,i-1) _
                     + "</p>" _                          ' -> end paragraph
                     + MID$(buf,i)
-                i = INSTR(i+1,buf,$LF)
                 EXIT LOOP
             END IF
         LOOP UNTIL 0
         i = INSTR(i+1,buf,$LF)
     WEND
+
+Fin_Generate:
 
   ' Finalize: add header and footer
   ' -------------------------------
@@ -2772,10 +2982,22 @@ SUB F5_Generate      ' F5- Generate and view in browser
     IF ISTRUE INSTR(html,".") THEN html = LEFT$(html,INSTR(-1,html,".")-1)
     html += ".htm"
     Save_File STRPTR(html), buf
+    IF (IS_COMMAND_LINE) THEN
+        t = html
+        IF ISTRUE INSTR(t,"\") THEN t = MID$(t,INSTR(-1,t,"\")+1)
+        DosPrint "Successfully created " + t
+        IF LCASE$(COMMAND$(1)) <> "-cv" THEN DosPrint $CRLF : EXIT SUB
+        DosPrint " - Opening it for view" + $CRLF
+    END IF
 
   ' View it in browser
   ' ------------------
     ShellExecute 0,"open",(html),"","",%SW_SHOW
+    IF %DEBUG AND ISFALSE (IS_COMMAND_LINE) THEN
+        sbT = "Successfuly generated in "+TRIM$(STR$(INT((TIMER-t0)*100)/100))+" seconds"
+        SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
+        SLEEP 1500
+    END IF
 
 END SUB
 
@@ -2842,7 +3064,7 @@ SUB F4_Progress_Indicator   ' F4- Show completion of document = % of links with 
   ' Get list of all headers, calculate their links,
   ' store them in 'alllinks_c' (calculated)
   ' -----------------------------------------------
-    Make_Headers_List()
+    Make_Headers_List(0) ' 0 to ignore header levels
 '    IF ISTRUE Count_Duplicates() THEN                      ' ToDo: keep it? (seems a little restrictive...)
 '      BEEP
 '      Dialog_Msg "Duplicate headers found => use F7 first" + $CR _
@@ -2904,7 +3126,7 @@ END SUB
 
 ' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 
-SUB Make_Headers_List
+SUB Make_Headers_List(BYVAL withLevel AS LONG)
 
     LOCAL e     AS STRING
     LOCAL i     AS LONG
@@ -2928,7 +3150,7 @@ SUB Make_Headers_List
         i = INSTR(j,e,mrk)
         ITERATE LOOP
       END IF
-      i = j                                     ' ignore the leading '#'
+      IF ISFALSE withLevel THEN i = j           ' ignore the leading '#'
       j = INSTR(i+1,e,$CR)
       IF j = 0 THEN j = LEN(e)+1                ' special case: end of document
       k = UBOUND(headers) + 1
@@ -2993,7 +3215,7 @@ SUB F7_Check_Duplicate_Headers      ' F7- Check Duplicate Headers
 
     LOCAL n     AS LONG
 
-    Make_Headers_List()
+    Make_Headers_List(0) ' 0 to ignore header levels
     n = Count_Duplicates()
 
     IF n = 0 THEN
@@ -3011,11 +3233,11 @@ END SUB
 
 ' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 
-SUB F2_Show_ToC                     ' F2- Table Of Content
+SUB F2_Header_Nav                   ' F2- Table Of Content
 
     LOCAL i     AS LONG
 
-    Make_Headers_List()
+    Make_Headers_List(0) ' 0 to ignore header levels
     REDIM dlg_combo_lst(LBOUND(headers) TO UBOUND(headers))
     FOR i = LBOUND(headers) TO UBOUND(headers)
       dlg_combo_lst(i) = headers(i)
@@ -3024,15 +3246,49 @@ SUB F2_Show_ToC                     ' F2- Table Of Content
     i = UBOUND(headers) - LBOUND(headers) + 1
     IF i = 0 THEN
       Dialog_Msg "No headers in the document.", _                                     ' msg label
-                 "Table Of Content"                                                   ' msg title
+                 "Header Navigator"                                                   ' msg title
     ELSE
       dlg_combo_ope = 2             ' F2- Table Of Content
       Dialog_Combo FORMAT$(i) + " header" + IIF$(i>1,"s","") + _
                    " available in the document :", _                                  ' combo label
                    "&Go", _                                                           ' combo button
-                   "Table Of Content"                                                 ' combo title
+                   "Header Navigator"                                                 ' combo title
     END IF
 
+END SUB
+
+' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+
+SUB Create_ToK()
+    LOCAL e     AS STRING
+    LOCAL i     AS LONG
+    LOCAL j     AS LONG
+    LOCAL cr    AS CHARRANGE
+
+    SendMessage hEdit,%EM_EXGETSEL,0,BYVAL VARPTR(cr)   ' get richedit caret position
+
+    Make_Headers_List(-1) ' -1 to get the header levels
+
+    i = UBOUND(headers) - LBOUND(headers) + 1
+    IF i = 0 THEN
+
+      Dialog_Msg "No headers in the document.", _       ' msg label
+                 "Create ToK"                           ' msg title
+    ELSE
+
+        FOR i = LBOUND(headers) TO UBOUND(headers)
+          REPLACE "#" WITH $TAB IN headers(i)           ' make unordered list
+          j = INSTR(headers(i), $SPC)                   ' of headers with level
+          headers(i) = LEFT$(headers(i),j-1) _
+                     + "*" + MID$(headers(i),j)
+          e += MID$(headers(i),2) + EOL
+        NEXT
+
+        Insert_STR EOL + e + EOL                        ' insert the list
+        Set_Sel (cr.cpMin, cr.cpMin+LEN(e)+1)           ' select it
+        Make_Link_From_Selection()                      ' make links
+
+    END IF
 END SUB
 
 ' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
@@ -3041,7 +3297,7 @@ SUB Link_To_Header_Dlg()                ' Ctrl + Alt + L- Insert Link
                                         ' Part #1: show combo dlg with existing headers+links
     LOCAL i     AS LONG
 
-    Make_Headers_List()
+    Make_Headers_List(0) ' 0 to ignore header levels
     REDIM dlg_combo_lst(LBOUND(headers) TO UBOUND(headers) + 1)
     dlg_combo_lst(0) = "New header (#)"
     FOR i = LBOUND(headers) TO UBOUND(headers)
@@ -3127,7 +3383,7 @@ SUB F8_Fill_Empty_Links     ' F8- Autofill empty links
 
   ' Make headers list and calculate all links
   ' -----------------------------------------
-    Make_Headers_List()
+    Make_Headers_List(0) ' 0 to ignore header levels
     alllinks_c = $LF
     FOR i = LBOUND(headers) TO UBOUND(headers)
       alllinks_c += anchor(headers(i)) + $LF            ' make list of all links calculated (alllinks_c)
@@ -3188,7 +3444,7 @@ SUB F9_Fix_Inco_Links       ' F9- Autofix incorrect links
 
   ' Make headers list and calculate all links
   ' -----------------------------------------
-    Make_Headers_List()
+    Make_Headers_List(0) ' 0 to ignore header levels
     alllinks_c = $LF
     FOR i = LBOUND(headers) TO UBOUND(headers)
       alllinks_c += anchor(headers(i)) + $LF            ' make list of all links calculated (alllinks_c)
@@ -3294,7 +3550,7 @@ SUB Follow_Link
 
   ' If link is internal, find the header it points to
   ' -------------------------------------------------
-    Make_Headers_List
+    Make_Headers_List(0) ' 0 to ignore header levels
     FOR i = LBOUND(headers) TO UBOUND(headers)
       IF anchor(headers(i)) = lnk THEN
         Set_Sel (hdr_pos(i),hdr_pos(i)) ' ...and go to it!
@@ -3304,4 +3560,22 @@ SUB Follow_Link
 
 END SUB
 
+' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+
+' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+FUNCTION DosPrint(sText AS STRING) AS LONG
+    STATIC iTxtDone, isConsole AS LONG
+    STATIC hCon AS DWORD
+
+    IF hCon = 0 THEN hCon = GetStdHandle(BYVAL %STD_OUTPUT_HANDLE)
+    IF hCon = %INVALID_HANDLE_VALUE THEN
+        isConsole = 1
+        CALL FreeConsole()
+        IF AllocConsole() THEN hCon = GetStdHandle(BYVAL %STD_OUTPUT_HANDLE)
+    END IF
+    IF hCon <> %INVALID_HANDLE_VALUE THEN
+        CALL WriteConsole(hCon, BYCOPY sText, LEN(sText), iTxtDone, BYVAL 0)
+    END IF
+    FUNCTION = isConsole
+END FUNCTION
 ' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤

@@ -120,7 +120,7 @@ FUNCTION Load_File(BYVAL pName AS DWORD) AS STRING
     pFile = pName
     IF ISFALSE File_Exist((@pFile)) THEN EXIT FUNCTION
     ff = FREEFILE
-    OPEN (@pFile) FOR BINARY AS #ff
+    OPEN (@pFile) FOR BINARY ACCESS READ LOCK SHARED AS #ff
     GET$ #ff,LOF(#ff),buf
     CLOSE #ff
     FUNCTION = buf
