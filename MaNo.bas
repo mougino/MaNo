@@ -7,14 +7,52 @@
 '                        MaNo - The Markdown Notepad
 ' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 ' [ ] evo: last undo level: set the %EM_SETMODIFY of the richedit to %FALSE
-' [ ] evo: -debug in command line
 ' [ ] evo: handle 2 different header labels w/ same link (e.g. # BIN Vs # BIN$ ...)
+
+' 1.3.0
+'-------
+' [X] evo: Portable Mode / F12 key (per suggestion from Gavin Holt)
+'     [X] embed default "MaNo.ini" in exe
+'     [X] embed .head + .foot in exe
+'         [X] import local .foot/.head to generate html
+'     [X] embed js + css + favicon in exe
+'         [X] reference local .js/.css/favicon.png in generated html
+'     [X] Dump local resources via F12 key
+'         [X] dump MaNo.ini
+'         [X] dump markdown.foot
+'         [X] dump markdown.head
+'         [X] dump markdown.svg
+'         [X] dump emojis.lst
+'         [X] dump .css/.js
+'         [X] dump favicon.png
+'     [X] Add support for local ini extra editor settings :
+'         [X] [editor] LineNbShow=      (input only)
+'         [X] [editor] LineNbFont=      (input only)
+'         [X] [editor] LineNbSize=      (input only)
+'         [X] [editor] LineNbForeColor= (input only)
+'         [X] [editor] LineNbBackColor= (input only)
+'         [X] [editor] TextFont=        (input only)
+'         [X] [editor] TextSize=        (input only)
+'         [X] [editor] TextForeColor=   (input only)
+'         [X] [editor] TextBackColor=   (input only)
+'     [X] Add support for local ini dialog settings w/ precedence over registry:
+'         [X] [editor] ZoomNum=         (input/output)
+'         [X] [editor] ZoomDen=         (input/output)
+'         [X] [editor] FirstLine=       (input/output)
+'         [X] [editor] MatchCase=       (input/output)
+'         [X] [editor] WholeWorld=      (input/output)
+'         [X] [editor] LastFile=        (input/output)
+'         [X] [dialog] Width=           (input/output)
+'         [X] [dialog] Height=          (input/output)
+'         [X] [dialog] PosX=            (input/output)
+'         [X] [dialog] PosY=            (input/output)
 
 ' 1.2.0
 '-------
-' [X] evo: command line help with "mano /?" or "mano -h"
-' [X] evo: command line convert with "mano -c input.md"
-' [X] evo: command line convert+view with "mano -cv input.md"
+' [X] evo: command line mode (per suggestion from Gavin Holt)
+'     [X] command line help with "mano /?" or "mano -h"
+'     [X] command line convert with "mano -c input.md"
+'     [X] command line convert+view with "mano -cv input.md"
 
 ' 1.1.0
 '-------
@@ -78,18 +116,15 @@
 #COMPILE EXE "MaNo.exe"
 #INCLUDE "inc\MaNo.inc"
 
-%DEBUG = -1
-GLOBAL show_debug_stats AS LONG
-
 MACRO IS_COMMAND_LINE = (LEFT$(LCASE$(COMMAND$(1)), 2) = "-c")
 
 ' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 
 $MANO     = "MaNo - "
 $UNTITLED = "MaNo - Untitled"
+$WEB      = "http://mougino.free.fr"
 
 FUNCTION PBMAIN() AS LONG
-
   ' ----------------------------------------------------
   ' Is MaNo called in command line with argument -c[v] ?
   ' ----------------------------------------------------
@@ -272,11 +307,8 @@ FUNCTION Message_Loop AS DWORD
             SendMessage hWnd,%WM_COMMAND,1126,0
             ! jmp MsgLoop
 
-          CASE %VK_F12                                  ' F12 = show debug stats
-            IF ISTRUE %DEBUG THEN
-              show_debug_stats = 1
-              Force_Refresh_Info
-            END IF
+          CASE %VK_F12                                  ' F12 = Portable Mode
+            SendMessage hWnd,%WM_COMMAND,1097,0
             ! jmp MsgLoop
 
           CASE %VK_INSERT                               ' special case : Insert key
@@ -562,16 +594,29 @@ FUNCTION Wnd_Proc(BYVAL hWin   AS LONG, _
 
       ' Create the RichEdit control
         LoadLibrary "RICHED20.DLL"
-        hFont = Make_Font("Courier New", 11)
+        IF File_Exist(EXE.PATH$ + "MaNo.ini") THEN
+            hFont  = Make_Font(GetIniS("editor","TextFont"), GetIniV("editor","TextSize"))
+            hFont2 = Make_Font(GetIniS("editor","LineNbFont"), GetIniV("editor","LineNbSize"))
+        ELSE
+            hFont  = Make_Font("Courier New", 11) ' standard font for editor
+            hFont2 = Make_Font("Courier New", 13) ' standard font for line-number column
+        END IF
         hEdit = Rich_Edit(hWin,0,0,100,100,1234)
         SendMessage hEdit,%EM_EXLIMITTEXT,0,-1
         SendMessage hEdit,%EM_SETOPTIONS,%ECOOP_XOR,%ECO_SELECTIONBAR
         SendMessage hEdit,%EM_SETTEXTMODE,%TM_PLAINTEXT OR _
                           %TM_MULTILEVELUNDO OR %TM_MULTICODEPAGE, 0
-        SendMessage hEdit,%EM_SETMARGINS,%EC_LEFTMARGIN,40
+        IF ISFALSE File_Exist(EXE.PATH$ + "MaNo.ini") THEN
+            SendMessage hEdit,%EM_SETMARGINS,%EC_LEFTMARGIN,40
+        ELSEIF ISTRUE GetIniV("editor","LineNbShow") THEN
+            SendMessage hEdit,%EM_SETMARGINS,%EC_LEFTMARGIN,40
+        END IF
         SendMessage hEdit,%WM_SETFONT,hFont,%TRUE
         SendMessage hEdit,%EM_SETEVENTMASK,0,%ENM_CHANGE OR %ENM_UPDATE OR _
                           %ENM_SELCHANGE OR %ENM_MOUSEEVENTS
+        IF File_Exist(EXE.PATH$ + "MaNo.ini") THEN
+            Set_Colors hEdit, GetIniS("editor","TextForeColor"), GetIniS("editor","TextBackColor")
+        END IF
 
       ' And subclass it for custom INSERT caret
         SetProp hEdit, "OldProc", SetWindowLong(hEdit,%GWL_WNDPROC,CODEPTR(RE_Subclass))
@@ -581,18 +626,31 @@ FUNCTION Wnd_Proc(BYVAL hWin   AS LONG, _
         SendMessage hBar,%WM_SETFONT,GetStockObject(%DEFAULT_GUI_FONT),%TRUE
         SendMessage hBar,%WM_SIZE,0,0
 
-      ' Restore dialog position, size, zoom and last file opened from registry
+      ' Restore dialog position, size, zoom and last file opened from ini/registry
         EOL = $LF ' Unix EOL by default
-        w             = VAL(getreg(0, "software\MaNo", "width", "0"))
-        h             = VAL(getreg(0, "software\MaNo", "height", "0"))
-        x             = VAL(getreg(0, "software\MaNo", "xoffset", "0"))
-        y             = VAL(getreg(0, "software\MaNo", "yoffset", "0"))
-        znum          = VAL(getreg(0, "software\MaNo", "zoomnum", "1"))
-        zden          = VAL(getreg(0, "software\MaNo", "zoomden", "1"))
-        lin1          = VAL(getreg(0, "software\MaNo", "firstline", "1"))
-        sch_matchcase = VAL(getreg(0, "software\MaNo", "matchcase", "0"))
-        sch_wholeword = VAL(getreg(0, "software\MaNo", "wholeword", "0"))
-        lastfile      =     getreg(0, "software\MaNo", "lastfile", "")
+        IF File_Exist(EXE.PATH$ + "MaNo.ini") THEN
+            w             = GetIniV("dialog","Width")
+            h             = GetIniV("dialog","Height")
+            x             = GetIniV("dialog","PosX")
+            y             = GetIniV("dialog","PosY")
+            znum          = GetIniV("editor","ZoomNum")   : IF znum = 0 THEN znum = 1
+            zden          = GetIniV("editor","ZoomDen")   : IF zden = 0 THEN zden = 1
+            lin1          = GetIniV("editor","FirstLine") : IF lin1 = 0 THEN lin1 = 1
+            sch_matchcase = GetIniV("editor","MatchCase")
+            sch_wholeword = GetIniV("editor","WholeWorld")
+            lastfile      = GetIniS("editor","LastFile")
+        ELSE
+            w             = VAL(getreg(0, "software\MaNo", "width", "0"))
+            h             = VAL(getreg(0, "software\MaNo", "height", "0"))
+            x             = VAL(getreg(0, "software\MaNo", "xoffset", "0"))
+            y             = VAL(getreg(0, "software\MaNo", "yoffset", "0"))
+            znum          = VAL(getreg(0, "software\MaNo", "zoomnum", "1"))
+            zden          = VAL(getreg(0, "software\MaNo", "zoomden", "1"))
+            lin1          = VAL(getreg(0, "software\MaNo", "firstline", "1"))
+            sch_matchcase = VAL(getreg(0, "software\MaNo", "matchcase", "0"))
+            sch_wholeword = VAL(getreg(0, "software\MaNo", "wholeword", "0"))
+            lastfile      =     getreg(0, "software\MaNo", "lastfile", "")
+        END IF
 
       ' Markdown file passed as argument of the program?
         IF COMMAND$ <> "" THEN lastfile = TRIM$(COMMAND$,$DQ) : lin1 = 0
@@ -668,6 +726,9 @@ FUNCTION Wnd_Proc(BYVAL hWin   AS LONG, _
             IF pthbuffer = "" THEN EXIT FUNCTION
             Write_Disk_File BYVAL VARPTR(pthbuffer)
             Force_Refresh_Info ' force refresh info
+
+          CASE 1097     ' ----------------------------- Portable Mode
+            DialogBox(hInstance,BYVAL 6500,hWnd,CODEPTR(Portable_Proc))
 
           CASE 1098     ' ----------------------------- Close Editor
             SendMessage hWin,%WM_SYSCOMMAND,%SC_CLOSE,0
@@ -922,7 +983,19 @@ FUNCTION Wnd_Proc(BYVAL hWin   AS LONG, _
           pthbuffer = MID$(pthbuffer,INSTR(pthbuffer,$MANO)+LEN($MANO))
           lastfile = TRIM$(pthbuffer)
           lin1 = Get_First_Line()
-        ' And save them in registry
+        ' And save them in ini/registry
+          IF File_Exist(EXE.PATH$ + "MaNo.ini") THEN
+            SetIni "dialog", "Width", STR$(w)
+            SetIni "dialog", "Height", STR$(h)
+            SetIni "dialog", "PosX", STR$(x)
+            SetIni "dialog", "PosY", STR$(y)
+            SetIni "editor", "ZoomNum", STR$(znum)
+            SetIni "editor", "ZoomDen", STR$(zden)
+            SetIni "editor", "FirstLine", STR$(lin1)
+            SetIni "editor", "MatchCase", STR$(sch_matchcase)
+            SetIni "editor", "WholeWorld", STR$(sch_wholeword)
+            SetIni "editor", "LastFile", lastfile
+          END IF
           setreg 0, "software\MaNo", "width",     STR$(w)
           setreg 0, "software\MaNo", "height",    STR$(h)
           setreg 0, "software\MaNo", "xoffset",   STR$(x)
@@ -1214,12 +1287,59 @@ FUNCTION About_Proc(BYVAL hDlg   AS LONG, _
       CASE %WM_NOTIFY
         pNm = lParam
         IF @pNm.code = %NM_CLICK AND @pNm.idFrom = 2222 THEN _
-            ShellExecute 0,"open","http://mougino.free.fr","","",%SW_SHOW
+            ShellExecute 0,"open",$WEB,"","",%SW_SHOW
 
       CASE %WM_COMMAND
         SELECT CASE AS LONG wParam
           CASE %IDOK, %IDCANCEL
             EndDialog hDlg, 0
+        END SELECT
+
+      CASE %WM_CLOSE                    ' the system close button
+         EndDialog hDlg, 0
+
+    END SELECT
+
+    FUNCTION = 0
+
+END FUNCTION
+
+' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+
+FUNCTION Portable_Proc(BYVAL hDlg   AS LONG, _
+                      BYVAL Msg    AS LONG, _
+                      BYVAL wParam AS LONG, _
+                      BYVAL lParam AS LONG) AS LONG
+
+  ' ------------------------------------------------------
+  ' message processing for the portable mode dialog (F12)
+  ' ------------------------------------------------------
+    LOCAL pNm   AS NMHDR PTR
+    LOCAL fn    AS STRING
+    SELECT CASE AS LONG Msg             ' process messages as integers
+
+      CASE %WM_INITDIALOG
+        Center_Dialog hDlg
+
+      CASE %WM_COMMAND
+        SELECT CASE AS LONG wParam
+
+          CASE %IDOK, %IDCANCEL
+            EndDialog hDlg, 0
+
+          CASE 2010
+            EndDialog hDlg, 1
+            fn = EXE.PATH$ + "MaNo.ini"      : Save_File STRPTR(fn), Get_Resource(4)
+            fn = EXE.PATH$ + "markdown.head" : Save_File STRPTR(fn), Get_Resource(6)
+            fn = EXE.PATH$ + "markdown.foot" : Save_File STRPTR(fn), Get_Resource(7)
+            fn = EXE.PATH$ + "markdown.svg"  : Save_File STRPTR(fn), Get_Resource(8)
+            fn = EXE.PATH$ + "emojis.lst"    : Save_File STRPTR(fn), Get_Resource(9)
+            fn = EXE.PATH$ + "markdown1.js"  : Save_File STRPTR(fn), Get_Resource(11)
+            fn = EXE.PATH$ + "markdown2.js"  : Save_File STRPTR(fn), Get_Resource(12)
+            fn = EXE.PATH$ + "markdown1.css" : Save_File STRPTR(fn), Get_Resource(13)
+            fn = EXE.PATH$ + "markdown2.css" : Save_File STRPTR(fn), Get_Resource(14)
+            fn = EXE.PATH$ + "favicon.png"   : Save_File STRPTR(fn), Get_Resource(15)
+            Dialog_Msg "Local files dumped successfully !", "Portable Mode"
         END SELECT
 
       CASE %WM_CLOSE                    ' the system close button
@@ -1861,6 +1981,7 @@ SUB Refresh_Info_Bars ' refresh margin of line numbers & status bar
     LOCAL  hDC  AS DWORD
     LOCAL  rct  AS RECT
     LOCAL  pt   AS POINT
+    LOCAL  hbr  AS DWORD
     LOCAL  car  AS DWORD
     LOCAL  leh  AS LONG
     LOCAL  lfi  AS LONG
@@ -1904,6 +2025,10 @@ SUB Refresh_Info_Bars ' refresh margin of line numbers & status bar
   ' -------------------------------------
   ' 2. Refresh the margin of line numbers
   ' -------------------------------------
+
+    IF File_Exist(EXE.PATH$ + "MaNo.ini") THEN
+        IF ISFALSE GetIniV("editor","LineNbShow") THEN EXIT SUB
+    END IF
 
   ' Find the index of the first visible line
   ' ----------------------------------------
@@ -1963,35 +2088,25 @@ SUB Refresh_Info_Bars ' refresh margin of line numbers & status bar
   ' -----------------------
     rct.nRight  = 40
     hDC = GetDC(hEdit)
-    FillRect hDC,BYVAL VARPTR(rct),GetStockObject(%DC_BRUSH)
-    SetTextColor hDC, RGB(95,211,188)
+    IF File_Exist(EXE.PATH$ + "MaNo.ini") THEN
+        hbr = CreateSolidBrush(Hex_To_Rgb(GetIniS("editor","LineNbBackColor")))
+        lcu = Hex_To_Rgb(GetIniS("editor","LineNbForeColor"))
+    ELSE
+        hbr = GetStockObject(%DC_BRUSH)
+        lcu = RGB(95,211,188)
+    END IF
+    FillRect hDC, BYVAL VARPTR(rct), hbr
+    SelectObject hDC, hFont2
+    SetTextColor hDC, lcu
+    SetBkMode hDC, %TRANSPARENT
     FOR lcu = lfi TO lla + 2
       IF lcu > nli THEN EXIT FOR
       rct.nTop = yfi + yst * (lcu - lfi) - leh
       rct.nBottom = rct.nTop + leh
       lnb = FORMAT$(lcu)
-      DrawText hDC,BYVAL STRPTR(lnb),LEN(lnb),rct,%DT_RIGHT OR %DT_VCENTER OR %DT_SINGLELINE
+      DrawText hDC, BYVAL STRPTR(lnb), LEN(lnb), rct, %DT_RIGHT OR %DT_VCENTER OR %DT_SINGLELINE
     NEXT
     ReleaseDC hEdit,hDC
-
-LOCAL e AS STRING
-LOCAL num,den AS LONG
-IF ISTRUE show_debug_stats THEN
-    show_debug_stats=0
-    e=Get_Sel
-    REPLACE $CR WITH "<CR>" IN e
-    REPLACE $LF WITH "<LF>" IN e
-    Get_Zoom num,den
-    ?"lfi="+STR$(lfi)+$CR _
-    +"yfi="+STR$(yfi)+$CR+$CR _
-    +"leh="+STR$(leh)+$CR _
-    +"yst="+STR$(yst)+$CR+$CR _
-    +"lla="+STR$(lla)+$CR _
-    +"yla="+STR$(yla)+$CR+$CR _
-    +"zoom="+STR$(num)+"/"+STR$(den)+$CR+$CR _
-    +e _
-    ,%MB_ICONINFORMATION,EXE.NAME$
-END IF
 
 END SUB
 
@@ -2119,6 +2234,36 @@ END SUB
 SUB Select_All
 
     Set_Sel (0,GetWindowTextLength(hEdit))
+
+END SUB
+
+' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+FUNCTION Hex_To_Rgb(h AS STRING) AS LONG
+
+    LOCAL r, g, b AS LONG
+    LOCAL c AS STRING
+
+    c = RIGHT$("000000" + h, 6)
+    r = VAL("&H" + LEFT$(c,2))
+    g = VAL("&H" + MID$(c,3,2))
+    b = VAL("&H" + RIGHT$(c,2))
+
+    FUNCTION = RGB(r,g,b)
+
+END FUNCTION
+
+' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+
+SUB Set_Colors (hW AS DWORD, fg AS STRING, bg AS STRING)
+
+      LOCAL cf AS CHARFORMAT
+
+      SendMessage hW, %EM_SETBKGNDCOLOR, %FALSE, Hex_To_Rgb(bg)
+      cf.cbSize      = LEN(cf)         ' Length of structure
+      cf.dwMask      = %CFM_COLOR      ' Set mask to colors only
+      cf.crTextColor = Hex_To_Rgb(fg)  ' Set the new color value
+      cf.dwEffects   = 0               ' Important!
+      SendMessage hW, %EM_SETCHARFORMAT, %SCF_DEFAULT, VARPTR(cf)
 
 END SUB
 
@@ -2372,6 +2517,7 @@ END SUB
 SUB F5_Generate      ' F5- Generate and view in browser
 
     LOCAL md            AS ASCIIZ * %MAX_PATH
+    LOCAL lf            AS ASCIIZ * %MAX_PATH
     LOCAL sbT           AS ASCIIZ * %MAX_PATH
     LOCAL buf           AS STRING
     LOCAL head          AS STRING
@@ -2406,10 +2552,46 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Extract html elements from resource
   ' -----------------------------------
-    head    = Get_Resource(6)
-    foot    = Get_Resource(7)
-    svg     = Get_Resource(8)
-    emojis  = Get_Resource(9)
+  ' HTML header
+    lf = EXE.PATH$ + "markdown.head"
+    IF File_Exist(lf) THEN
+        head    = Load_File(BYVAL VARPTR(lf))
+    ELSE
+        head    = Get_Resource(6)
+    END IF
+    lf = "markdown1.css"
+    IF File_Exist(EXE.PATH$ + lf) THEN REPLACE $WEB + "/" + lf WITH Url_Encode(EXE.PATH$ + lf) IN head
+    lf = "markdown2.css"
+    IF File_Exist(EXE.PATH$ + lf) THEN REPLACE $WEB + "/" + lf WITH Url_Encode(EXE.PATH$ + lf) IN head
+    lf = "favicon.png"
+    IF File_Exist(EXE.PATH$ + lf) THEN REPLACE $WEB + "/MaNo.ico" WITH Url_Encode(EXE.PATH$ + lf + "?v=1.0") IN head
+    IF INSTR(md, EXE.PATH$) = 1 THEN REPLACE Url_Encode(EXE.PATH$) WITH "./" IN head
+  ' HTML footer
+    lf = EXE.PATH$ + "markdown.foot"
+    IF File_Exist(lf) THEN
+        foot    = Load_File(BYVAL VARPTR(lf))
+    ELSE
+        foot    = Get_Resource(7)
+    END IF
+    lf = "markdown1.js"
+    IF File_Exist(EXE.PATH$ + lf) THEN REPLACE $WEB + "/" + lf WITH Url_Encode(EXE.PATH$ + lf) IN foot
+    lf = "markdown2.js"
+    IF File_Exist(EXE.PATH$ + lf) THEN REPLACE $WEB + "/" + lf WITH Url_Encode(EXE.PATH$ + lf) IN foot
+    IF INSTR(md, EXE.PATH$) = 1 THEN REPLACE Url_Encode(EXE.PATH$) WITH "./" IN foot
+  ' HTML svg
+    lf = EXE.PATH$ + "markdown.svg"
+    IF File_Exist(lf) THEN
+        svg     = Load_File(BYVAL VARPTR(lf))
+    ELSE
+        svg     = Get_Resource(8)
+    END IF
+  ' HTML emoji list
+    lf = EXE.PATH$ + "emojis.lst"
+    IF File_Exist(lf) THEN
+        emojis  = Load_File(BYVAL VARPTR(lf))
+    ELSE
+        emojis  = Get_Resource(9)
+    END IF
 
   ' Set html title in the header
   ' ----------------------------
@@ -2432,7 +2614,7 @@ SUB F5_Generate      ' F5- Generate and view in browser
   ' Treat level-1 to level-6 headers
   ' --------------------------------
     FOR n=1 TO 6
-        IF %DEBUG THEN
+        IF ISFALSE (IS_COMMAND_LINE) THEN
             sbT = "Treat level-"+TRIM$(STR$(n))+" headers"
             SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
         END IF
@@ -2461,7 +2643,7 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat images
   ' ------------
-    IF %DEBUG THEN
+    IF ISFALSE (IS_COMMAND_LINE) THEN
         sbT = "Treat images"
         SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
     END IF
@@ -2483,7 +2665,7 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat links (external and to headers)
   ' -------------------------------------
-    IF %DEBUG THEN
+    IF ISFALSE (IS_COMMAND_LINE)  THEN
         sbT = "Treat links (external and to headers)"
         SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
     END IF
@@ -2504,7 +2686,7 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat blockquotes
   ' -----------------
-    IF %DEBUG THEN
+    IF ISFALSE (IS_COMMAND_LINE)  THEN
         sbT = "Treat blockquotes"
         SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
     END IF
@@ -2537,7 +2719,7 @@ SUB F5_Generate      ' F5- Generate and view in browser
     s = TRIM$(STR$(TALLY(buf,e)/2))
     WHILE ISTRUE i
         INCR n
-        IF %DEBUG THEN
+        IF ISFALSE (IS_COMMAND_LINE)  THEN
             sbT = "Treat code block # "+TRIM$(STR$(n))+" / "+s
             SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
         END IF
@@ -2563,7 +2745,7 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat inline code
   ' -----------------
-    IF %DEBUG THEN
+    IF ISFALSE (IS_COMMAND_LINE)  THEN
         sbT = "Treat inline code"
         SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
     END IF
@@ -2579,7 +2761,7 @@ SUB F5_Generate      ' F5- Generate and view in browser
 
   ' Treat unordered lists
   ' ---------------------
-    IF %DEBUG THEN
+    IF ISFALSE (IS_COMMAND_LINE)  THEN
         sbT = "Treat unordered lists"
         SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
     END IF
@@ -2659,7 +2841,7 @@ End_List:
 
   ' Treat ordered lists
   ' -------------------
-    IF %DEBUG THEN
+    IF ISFALSE (IS_COMMAND_LINE)  THEN
         sbT = "Treat ordered lists"
         SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
     END IF
@@ -2690,7 +2872,7 @@ End_List:
 
   ' Treat task lists
   ' ----------------
-    IF %DEBUG THEN
+    IF ISFALSE (IS_COMMAND_LINE)  THEN
         sbT = "Treat task lists"
         SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
     END IF
@@ -2739,7 +2921,7 @@ End_List:
 
   ' Treat tables
   ' ------------
-    IF %DEBUG THEN
+    IF ISFALSE (IS_COMMAND_LINE)  THEN
         sbT = "Treat tables"
         SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
     END IF
@@ -2792,7 +2974,7 @@ End_List:
 
   ' Treat bold
   ' ----------
-    IF %DEBUG THEN
+    IF ISFALSE (IS_COMMAND_LINE)  THEN
         sbT = "Treat bold"
         SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
     END IF
@@ -2808,7 +2990,7 @@ End_List:
 
   ' Treat underline
   ' ---------------
-    IF %DEBUG THEN
+    IF ISFALSE (IS_COMMAND_LINE)  THEN
         sbT = "Treat underline"
         SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
     END IF
@@ -2824,7 +3006,7 @@ End_List:
 
   ' Treat strikethrough
   ' -------------------
-    IF %DEBUG THEN
+    IF ISFALSE (IS_COMMAND_LINE)  THEN
         sbT = "Treat strikethrough"
         SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
     END IF
@@ -2840,7 +3022,7 @@ End_List:
 
   ' Treat italic
   ' ------------
-    IF %DEBUG THEN
+    IF ISFALSE (IS_COMMAND_LINE)  THEN
         sbT = "Treat italic"
         SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
     END IF
@@ -2866,7 +3048,7 @@ End_List:
 
   ' Treat hyperlinks (http:// www. mailto: etc.)
   ' --------------------------------------------
-    IF %DEBUG THEN
+    IF ISFALSE (IS_COMMAND_LINE)  THEN
         sbT = "Treat hyperlinks"
         SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
     END IF
@@ -2903,7 +3085,7 @@ End_List:
 
   ' Treat emojis
   ' ------------
-    IF %DEBUG THEN
+    IF ISFALSE (IS_COMMAND_LINE)  THEN
         sbT = "Treat emojis"
         SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
     END IF
@@ -2924,7 +3106,7 @@ End_List:
 
   ' Add paragraphs for everything else
   ' ----------------------------------
-    IF %DEBUG THEN
+    IF ISFALSE (IS_COMMAND_LINE)  THEN
         sbT = "Add paragraphs"
         SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
     END IF
@@ -2993,7 +3175,7 @@ Fin_Generate:
   ' View it in browser
   ' ------------------
     ShellExecute 0,"open",(html),"","",%SW_SHOW
-    IF %DEBUG AND ISFALSE (IS_COMMAND_LINE) THEN
+    IF ISFALSE (IS_COMMAND_LINE) THEN
         sbT = "Successfuly generated in "+TRIM$(STR$(INT((TIMER-t0)*100)/100))+" seconds"
         SendMessage hBar,%SB_SETTEXT,4,BYVAL VARPTR(sbT)
         SLEEP 1500
@@ -3562,7 +3744,6 @@ END SUB
 
 ' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 
-' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 FUNCTION DosPrint(sText AS STRING) AS LONG
     STATIC iTxtDone, isConsole AS LONG
     STATIC hCon AS DWORD
@@ -3578,4 +3759,15 @@ FUNCTION DosPrint(sText AS STRING) AS LONG
     END IF
     FUNCTION = isConsole
 END FUNCTION
+
+' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+
+FUNCTION Url_Encode(sText AS STRING) AS STRING
+    LOCAL rText AS STRING
+
+    rText = "file:///" + sText
+    REPLACE "\" WITH "/" IN rText
+    FUNCTION = rText
+END FUNCTION
+
 ' ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤

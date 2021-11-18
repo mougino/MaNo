@@ -25,8 +25,8 @@ You can use **MaNo** as a Windows graphical application, or in command line.
 For a list of command line options, type `mano /?` or `mano -h` at the prompt.
 
 > Usage: mano -c[v] input.md
->        -c  = convert input.md to input.htm
->        -cv = convert + view
+>  where -c  = convert input.md to input.htm ;
+>  and -cv = convert + view
 
 # How to build
 

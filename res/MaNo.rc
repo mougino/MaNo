@@ -2,12 +2,21 @@
 
     1 24 MOVEABLE PURE "manifest.xml" // embedded manifest file
 
-    5 ICON MOVEABLE PURE LOADONCALL DISCARDABLE "MANO.ICO"
+    4 RCDATA DISCARDABLE "MaNo.ini"
+
+    5 ICON MOVEABLE PURE LOADONCALL DISCARDABLE "MaNo.ico"
 
     6 RCDATA DISCARDABLE "markdown.head"
     7 RCDATA DISCARDABLE "markdown.foot"
     8 RCDATA DISCARDABLE "markdown.svg"
     9 RCDATA DISCARDABLE "emojis.lst"
+
+    11 RCDATA DISCARDABLE "..\markdown\markdown1.js"
+    12 RCDATA DISCARDABLE "..\markdown\markdown2.js"
+    13 RCDATA DISCARDABLE "..\markdown\markdown1.css"
+    14 RCDATA DISCARDABLE "..\markdown\markdown2.css"
+
+    15 RCDATA DISCARDABLE "favicon.png"
 
 10  MENUEX MOVEABLE IMPURE LOADONCALL DISCARDABLE
 BEGIN
@@ -94,6 +103,8 @@ BEGIN
     POPUP "&Help", , , 0
     BEGIN
         MENUITEM "&About\tF1", 1099
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "&Portable Mode\tF12", 1097
     END
 END
 
@@ -166,12 +177,27 @@ CAPTION " About MaNo - The Markdown Notepad"
 FONT 8, "MS Sans Serif", 700, 0 /*FALSE*/
 BEGIN
     ICON            5, 65535 14,12,19,20, , 0
-    LTEXT           "MaNo Version 1.2.0", 65534,      57,24,118,10, SS_LEFT, , 0
+    LTEXT           "MaNo Version 1.3.0", 65534,      57,24,118,10, SS_LEFT, , 0
     LTEXT           "MaNo stands for Markdown Notepad.\nIt is a lean editor for the Markdown language, it\ngenerates html and provides performance tools.", 65531,      58,40,153,30, SS_LEFT, , 0
     LTEXT           "Copyright mougino@free.fr  2017-2022", 65533,   58,74,151,10, SS_LEFT, , 0
     CONTROL         "<a>http://mougino.free.fr</a>", 2222,   "SysLink",    0,     58,85,68,10
     PUSHBUTTON      "OK", 1,    164,113,50,14, 0, , 0
     GROUPBOX        "", 65529,      47,11,167,94, 0, , 0
+END
+
+6500 DIALOGEX MOVEABLE IMPURE LOADONCALL DISCARDABLE    10, 10, 246, 132, 0
+STYLE DS_MODALFRAME | 0x0004 | DS_CENTER | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_POPUP
+CAPTION " MaNo - Portable Mode"
+FONT 8, "MS Sans Serif", 700, 0 /*FALSE*/
+BEGIN
+    ICON            5, 65535 14,12,19,20, , 0
+    LTEXT           "Portable mode enables advanced customization.", 65534,      58,15,163,10, SS_LEFT, , 0
+    LTEXT           "Press ""Dump"" to create* some files locally (near\nMaNo.exe). The program will then take them as\ninput, including if you modify them :", 65531,      58,29,163,30, SS_LEFT, , 0
+    LTEXT           "-- ""MaNo.ini"" : editor colors, fonts, etc.\n-- ""markdown.head/foot"" : html footer + header\n-- ""markdown.svg/css/js, emojis.lst"" : html resources", 65532,      58,56,165,60, SS_LEFT, , 0
+    LTEXT           "* existing files will be overwritten", 65533,      58,86,163,10, SS_LEFT, , 0
+    PUSHBUTTON      "Close", 1,    179,113,50,14, 0, , 0
+    PUSHBUTTON      "Dump !", 2010,  47,113,50,14, 0, , 0
+    GROUPBOX        "", 65529,      47,6,182,99, 0, , 0
 END
 
 7000 DIALOGEX MOVEABLE IMPURE LOADONCALL DISCARDABLE    10, 10, 167, 63, 0
@@ -223,7 +249,7 @@ BEGIN
     BEGIN
       VALUE "ApplicationType",  "Win32 executable\000"
       VALUE "FileDescription",  "The Markdown Notepad\000"
-      VALUE "FileVersion",      "1.2.0"
+      VALUE "FileVersion",      "1.3.0"
       VALUE "LegalCopyright",   "Copyright \251 2017-2022 Nicolas Mougin\000"
       VALUE "ProductName",      "MaNo\000"
       VALUE "Licence",          "GNU GPL V3\000"

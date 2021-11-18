@@ -60,6 +60,7 @@
     GLOBAL hBar              AS DWORD
     GLOBAL hEdit             AS DWORD
     GLOBAL hFont             AS DWORD
+    GLOBAL hFont2            AS DWORD
 
     GLOBAL Edit1             AS DWORD
     GLOBAL Edit2             AS DWORD
@@ -101,6 +102,7 @@
     #INCLUDE "COMMCTRL.INC"
     #INCLUDE "inc\altdlgs.inc"
     #INCLUDE "inc\registry.inc"
+    #INCLUDE "inc\ini.inc"
     #INCLUDE "inc\md-anchor.inc"
     #INCLUDE "inc\highlight.inc"
     #INCLUDE "inc\re-custom-caret.inc"
